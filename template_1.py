@@ -1,0 +1,342 @@
+import pdfplumber
+import docx
+from io import BytesIO
+from docx import Document
+from docx.shared import RGBColor, Inches, Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
+import google.generativeai as genai
+import os
+from dotenv import load_dotenv
+
+# --- Environment Setup ---
+
+load_dotenv()
+api_key = os.getenv("GEMINI_API_KEY")
+if not api_key:
+    raise ValueError("GEMINI_API_KEY missing.")
+
+genai.configure(api_key=api_key)
+model = genai.GenerativeModel('gemini-2.5-flash') 
+
+# Define the brand color
+M_RED = RGBColor(204, 31, 32)
+
+
+# --- Text Extraction ---
+
+def extract_text_from_pdf(file):
+    """Extracts text from an uploaded PDF file."""
+    text = ""
+    with pdfplumber.open(file) as pdf:
+        for page in pdf.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+    return text
+
+def extract_text_from_docx(file):
+    """Extracts text from an uploaded DOCX file."""
+    doc = docx.Document(file)
+    return "\n".join([para.text for para in doc.paragraphs])
+
+# --- Gemini API Interaction ---
+
+def gemini_prompt(resume_text):
+    """Creates the prompt for the Gemini API based on the template."""
+    
+    # *** MODIFIED: Stronger prompt for summary, explicitly forbidding name ***
+    template_instruction = """
+You are a resume data extractor. Your task is to extract information from the provided resume and format it as clean, tagged, plain text.
+DO NOT add any special formatting. Just extract the text for each tag.
+
+---
+
+FullName: [Full Name]
+
+Professional Summary:
+[Extract and **summarize** the resume's professional overview. Create a brief, professional summary (3-4 sentences) capturing the main expertise and years of experience. **Do NOT include the candidate's name.** Base this summary *only* on the provided resume text.]
+
+Roles:
+[Extract all roles listed."]
+
+Technologies:
+[Extract the technologies from the resume. **You MUST preserve the 'Category: Skills' format for each line.** For example: "ETL Tools: Informatica, IICS"]
+
+Education:
+[Extract content for the education section]
+
+Certifications:
+[Extract certifications done by the candidate from resume ]
+
+Geographic locale:
+[Extract geographic locale from resume section]
+
+
+
+---JOB START---
+CompanyName: [Company Name, if available. If not, use 'Project']
+Role: [Your Role/Job Title]
+Duration: [Start Date – End Date]
+Client: [Client Name for the project. If not applicable, write N/A]
+Description: [Extract the project description]
+Responsibilities:
+- [Responsibility point 1]
+- [Responsibility point 2]
+
+---JOB END---
+
+Repeat the ---JOB START--- to ---JOB END--- block for each job/project. If a section is empty, write "None".
+"""
+    return f"Resume Text:\n{resume_text}\n\n{template_instruction}"
+def call_gemini_api(prompt):
+    """Calls the Gemini API and returns the text response."""
+    response = model.generate_content(prompt)
+    try:
+        return response.text
+    except ValueError:
+        print("Warning: Gemini response blocked or empty.")
+        return "Error: Could not generate content."
+
+def parse_gemini_text(text):
+    """Parses the tagged text from Gemini into a structured dictionary."""
+    resume_data = {"Jobs": []}
+    lines = text.split('\n')
+    current_key = None
+    
+    main_keys = ["FullName", "Professional Summary", "Roles", "Technologies", "Education", "Certifications", "Geographic locale", "Professional and Experience Summary"]
+    
+    for line in lines:
+        stripped_line = line.strip()
+
+        if stripped_line == "---JOB START---":
+            current_key = "Jobs"
+            resume_data["Jobs"].append({})
+            continue
+        elif stripped_line == "---JOB END---":
+            current_key = None
+            continue
+        
+        key_from_line = None
+        value_from_line = ""
+        
+        if ":" in line and not stripped_line.startswith('-'):
+            try:
+                key_from_line, value_from_line = line.split(":", 1)
+                key_from_line = key_from_line.strip()
+                value_from_line = value_from_line.strip()
+            except ValueError:
+                pass 
+        
+        if key_from_line in main_keys:
+            current_key = key_from_line
+            resume_data[current_key] = value_from_line
+            continue
+            
+        elif current_key == "Jobs" and key_from_line in ["CompanyName", "Role", "Duration", "Client", "BusinessValue", "Description", "Responsibilities"]:
+            if key_from_line in ["CompanyName", "Role", "Duration", "Client", "BusinessValue", "Description"]:
+                resume_data["Jobs"][-1][key_from_line] = value_from_line
+            elif key_from_line == "Responsibilities":
+                current_key = "Responsibilities" 
+                if current_key not in resume_data["Jobs"][-1]:
+                    resume_data["Jobs"][-1][current_key] = []
+                if value_from_line:
+                    resume_data["Jobs"][-1][current_key].append(value_from_line)
+            continue
+            
+        elif current_key in main_keys and current_key != "FullName" and stripped_line:
+            resume_data[current_key] += "\n" + line.strip()
+
+        elif current_key == "Responsibilities" and stripped_line:
+             if "Responsibilities" in resume_data["Jobs"][-1]:
+                 resume_data["Jobs"][-1][current_key].append(stripped_line)
+                 
+    return resume_data
+
+def set_table_no_border(table):
+    """Helper function to remove all borders from a table."""
+    for row in table.rows:
+        for cell in row.cells:
+            tcPr = cell._tc.get_or_add_tcPr()
+            tcBorders = OxmlElement('w:tcBorders')
+            for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
+                border = OxmlElement(f'w:{border_name}')
+                border.set(qn('w:val'), 'nil')
+                tcBorders.append(border)
+            tcPr.append(tcBorders)
+
+def add_heading(doc, text, level=1):
+    """Helper to add a styled heading."""
+    if not text or text.strip().lower() == 'none':
+        return
+    style = f'Heading {level}' if level > 0 else 'Title'
+    p = doc.add_paragraph(text, style=style)
+    p.alignment = WD_ALIGN_PARAGRAPH.LEFT 
+    p.runs[0].font.color.rgb = M_RED
+    p.runs[0].font.name = 'Calibri'
+    if level == 1:
+        p.runs[0].text = text.upper()
+
+def add_content_para(doc, text):
+    """Helper to add styled content as a single justified paragraph."""
+    if text and text.strip().lower() != 'none':
+        para_text = text.strip().replace('\n', ' ')
+        if para_text:
+            p = doc.add_paragraph(para_text)
+            p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+
+# --- Main DOCX Conversion Function ---
+
+def convert_to_docx(text):
+    """
+    Parses the Gemini-formatted text and builds the DOCX document.
+    """
+    doc = Document()
+    
+    style = doc.styles['Normal']
+    style.font.name = 'Calibri'
+    style.font.size = Pt(11)
+
+    resume_data = parse_gemini_text(text)
+    
+    # --- Add Header (Logo Left, Name Right) ---
+    header = doc.sections[0].header
+    header.is_linked_to_previous = False
+    header.paragraphs[0].text = "" 
+    
+    table_header = header.add_table(rows=1, cols=2, width=Inches(6.5))
+    set_table_no_border(table_header)
+
+    cell_left = table_header.cell(0, 0)
+    cell_left.width = Inches(1.5)
+    p_left = cell_left.paragraphs[0]
+    try:
+        r_left = p_left.add_run()
+        r_left.add_picture('logo.png', width=Inches(1.5))
+    except Exception:
+        p_left.text = "[logo.png not found]"
+    p_left.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    
+    cell_right = table_header.cell(0, 1)
+    cell_right.width = Inches(5.0)
+    p_right = cell_right.paragraphs[0]
+    run_name = p_right.add_run(resume_data.get("FullName", "Candidate Name"))
+    run_name.font.color.rgb = M_RED
+    run_name.font.name = 'Calibri'
+    run_name.bold = True
+    run_name.font.size = Pt(12)
+    p_right.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    add_heading(doc, "PROFESSIONAL OVERVIEW", level=1)
+    
+    add_content_para(doc, resume_data.get("Professional Summary"))
+    doc.add_paragraph() 
+
+    overview_headings = ["Roles", "Technologies", "Education", "Certifications", "Geographic locale"]
+    
+    for heading in overview_headings:
+        content_text = resume_data.get(heading, "None")
+        if content_text.lower() == 'none' or not content_text.strip():
+            continue 
+
+        p_heading = doc.add_paragraph()
+        run_heading = p_heading.add_run(heading + ":")
+        run_heading.font.name = 'Calibri'
+        run_heading.bold = True
+        run_heading.font.color.rgb = M_RED
+
+        if heading == "Roles" and content_text:
+            lines = content_text.strip().split('\n')
+            roles = []
+            for line in lines:
+                roles.extend([r.strip() for r in line.split(',') if r.strip()])
+            
+            for role in roles:
+                doc.add_paragraph(role, style='List Bullet')
+
+        elif heading == "Technologies" and content_text:
+            tech_table = doc.add_table(rows=1, cols=2)
+            tech_table.style = 'Table Grid' 
+            
+            tech_table.width = Inches(6.5)
+            tech_table.columns[0].width = Inches(2.0)
+            tech_table.columns[1].width = Inches(4.5)
+
+            hdr_cells = tech_table.rows[0].cells
+            hdr_cells[0].text = '' 
+            hdr_cells[1].text = '' 
+            hdr_cells[0].paragraphs[0].add_run('Category').bold = True
+            hdr_cells[1].paragraphs[0].add_run('Skills').bold = True
+            
+            for line in content_text.strip().split('\n'):
+                if ':' in line:
+                    try:
+                        category, skills = line.split(':', 1)
+                        row_cells = tech_table.add_row().cells
+                        row_cells[0].text = category.strip()
+                        row_cells[1].text = skills.strip()
+                    except ValueError:
+                        pass
+            doc.add_paragraph() 
+
+        elif heading == "Certifications" and content_text:
+            lines = content_text.strip().split('\n')
+            for line in lines:
+                if line.strip():
+                    doc.add_paragraph(line.lstrip('- '), style='List Bullet')
+
+        #
+        else:
+            for line in content_text.strip().split('\n'):
+                if line.strip():
+                    p = doc.add_paragraph(line.strip())
+                    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    
+    doc.add_paragraph() 
+
+    # --- Professional and Experience Summary Section ---
+    doc.add_page_break()
+    add_heading(doc, "Professional and Experience Summary", level=1)
+
+    # --- Job/Project Blocks ---
+    for i, job_data in enumerate(resume_data.get("Jobs", [])):
+        add_heading(doc, f"Project {i+1}", level=2)
+
+        if job_data.get("Client"):
+            p = doc.add_paragraph()
+            p.add_run("Client: ").bold = True
+            p.add_run(job_data.get("Client"))
+
+        if job_data.get("Duration"):
+            p = doc.add_paragraph()
+            p.add_run("Duration: ").bold = True
+            p.add_run(job_data.get("Duration"))
+
+        if job_data.get("Role"):
+            p = doc.add_paragraph()
+            p.add_run("Role: ").bold = True
+            p.add_run(job_data.get("Role"))
+
+        if job_data.get("Description"):
+            p = doc.add_paragraph()
+            p.add_run("Description: ").bold = True
+            add_content_para(doc, job_data.get("Description"))
+
+        responsibilities = job_data.get('Responsibilities', [])
+        if responsibilities:
+            p = doc.add_paragraph() 
+            resp_run = p.add_run("Roles and Responsibilities:")
+            resp_run.font.name = 'Calibri'
+            resp_run.bold = True
+            
+            for resp in responsibilities:
+                if resp.strip():
+                    doc.add_paragraph(resp.lstrip('- '), style='List Bullet')
+        
+        doc.add_paragraph()
+
+    # --- Save to buffer ---
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
