@@ -89,14 +89,38 @@ def call_gemini_api(prompt):
 
 
 
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+
 def set_table_no_border(table):
-    for row in table.rows:
-        for cell in row.cells:
-            tcPr = cell._tc.get_or_add_tcPr()
-            tcBorders = OxmlElement('w:tcBorders')
-            for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
-                border = OxmlElement(f'w:{border_name}'); border.set(qn('w:val'), 'nil'); tcBorders.append(border)
-            tcPr.append(tcBorders)
+    """
+    Sets all table borders (outer and inner) to 'nil' (no border).
+    """
+    tblPr = table._tbl.get_or_add_tblPr()
+    
+    existing_borders = tblPr.find(qn('w:tblBorders'))
+    if existing_borders is not None:
+        tblPr.remove(existing_borders)
+    
+    tblBorders = OxmlElement('w:tblBorders')
+    
+   
+    border_types = [
+        'top',    
+        'left',
+        'bottom',
+        'right',
+        'insideH', 
+        'insideV'
+    ]
+    for border_name in border_types:
+        border = OxmlElement(f'w:{border_name}')
+        border.set(qn('w:val'), '0.1')  
+        border.set(qn('w:sz'), '0')   
+        tblBorders.append(border)
+        
+    # 
+    tblPr.append(tblBorders)
 
 def populate_table_cell(cell, heading, content):
     p_heading = cell.paragraphs[0]; run_heading = p_heading.add_run(heading)
@@ -176,7 +200,7 @@ def convert_to_docx(text):
     run_des.bold = False
     run_des.font.size = Pt(12)
     
-    doc.add_paragraph() # Add some space after designation
+    doc.add_paragraph()
 
     doc.add_paragraph("Professional Overview:", style='Heading 2').runs[0].font.color.rgb = RGBColor(204, 31, 32)
     doc.add_paragraph(resume_data.get("ProfessionalOverviewSummary", "").strip())
@@ -209,10 +233,7 @@ def convert_to_docx(text):
                 p_heading.runs[0].font.name = 'Lato'
                 p_heading.paragraph_format.space_before = Pt(0) # Remove gap
                 p_heading.paragraph_format.space_after = Pt(0)  # Remove gap
-                # --- END MODIFICATION ---
-
-
-                # --- Populate content cell (col 1) ---
+    
                 content_cell = table.cell(r, 1)
                 content_cell.text = "" # Clear the default paragraph
                 
