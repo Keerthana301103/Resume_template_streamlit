@@ -89,38 +89,14 @@ def call_gemini_api(prompt):
 
 
 
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
-
 def set_table_no_border(table):
-    """
-    Sets all table borders (outer and inner) to 'nil' (no border).
-    """
-    tblPr = table._tbl.get_or_add_tblPr()
-    
-    existing_borders = tblPr.find(qn('w:tblBorders'))
-    if existing_borders is not None:
-        tblPr.remove(existing_borders)
-    
-    tblBorders = OxmlElement('w:tblBorders')
-    
-   
-    border_types = [
-        'top',    
-        'left',
-        'bottom',
-        'right',
-        'insideH', 
-        'insideV'
-    ]
-    for border_name in border_types:
-        border = OxmlElement(f'w:{border_name}')
-        border.set(qn('w:val'), '0.1')  
-        border.set(qn('w:sz'), '0')   
-        tblBorders.append(border)
-        
-    # 
-    tblPr.append(tblBorders)
+    for row in table.rows:
+        for cell in row.cells:
+            tcPr = cell._tc.get_or_add_tcPr()
+            tcBorders = OxmlElement('w:tcBorders')
+            for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
+                border = OxmlElement(f'w:{border_name}'); border.set(qn('w:val'), 'nil'); tcBorders.append(border)
+            tcPr.append(tcBorders)
 
 def populate_table_cell(cell, heading, content):
     p_heading = cell.paragraphs[0]; run_heading = p_heading.add_run(heading)
@@ -217,7 +193,10 @@ def convert_to_docx(text):
         if table_data:
             table = doc.add_table(rows=len(table_data), cols=2)
             table.style = 'Table Grid'
+            
             set_table_no_border(table) 
+            table.columns[0].width = Inches(1.5)
+            table.columns[1].width = Inches(5.0)
             
             for r, row_data in enumerate(table_data):
                 heading, content = row_data
@@ -299,12 +278,12 @@ def convert_to_docx(text):
 
     doc.add_page_break()
     
-    p_exp_heading = doc.add_paragraph("Professional and Business Experience:", style='Heading 2')
+    p_exp_heading = doc.add_paragraph("Professional and Business Experience", style='Heading 2')
     p_exp_heading.alignment = WD_ALIGN_PARAGRAPH.RIGHT 
     p_exp_heading.runs[0].font.color.rgb = RGBColor(204, 31, 32)
 
     for job_data in resume_data.get("Jobs", []):
-        p = doc.add_paragraph(); company_run = p.add_run(job_data.get("CompanyName", "")); company_run.font.color.rgb = RGBColor(204, 31, 32); company_run.font.name = 'Lato'; company_run.bold = True
+        p = doc.add_paragraph(); company_run = p.add_run(job_data.get("CompanyName", "")); company_run.font.color.rgb = RGBColor(204, 31, 32); company_run.font.name = 'Lato Black'; company_run.bold = True; company_run.font.size = Pt(12)
         p.add_run('\t'); duration_run = p.add_run(job_data.get("Duration", "")); duration_run.font.name = 'Lato'; p.paragraph_format.tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT)
         p = doc.add_paragraph(); role_run = p.add_run(job_data.get("Role", "")); role_run.font.name = 'Lato'; role_run.bold = True; doc.add_paragraph()
         p = doc.add_paragraph(); client_label_run = p.add_run("CLIENT: "); client_label_run.font.name = 'Lato'; client_label_run.bold = True; client_text_run = p.add_run(job_data.get("Client", "N/A")); client_text_run.font.name = 'Lato'; doc.add_paragraph()
