@@ -19,10 +19,7 @@ load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key: raise ValueError("GEMINI_API_KEY missing.")
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel('gemini-2.5-flash') # Using a more recent model, adjust if needed
-
-# --- Text Extraction ---
-
+model = genai.GenerativeModel('gemini-2.5-flash') 
 def extract_text_from_pdf(file):
     text = ""
     with pdfplumber.open(file) as pdf:
@@ -291,7 +288,14 @@ def convert_to_docx(text):
         p = doc.add_paragraph(); role_run = p.add_run(job_data.get("Role", "")); role_run.font.name = 'Lato'; role_run.bold = True; doc.add_paragraph()
         p = doc.add_paragraph(); client_label_run = p.add_run("CLIENT: "); client_label_run.font.name = 'Lato'; client_label_run.bold = True; client_text_run = p.add_run(job_data.get("Client", "N/A")); client_text_run.font.name = 'Lato'; doc.add_paragraph()
         p = doc.add_paragraph(); resp_run = p.add_run("Responsibilities:"); resp_run.bold=True; resp_run.font.name = 'Lato'; resp_run.underline = True;resp_run.font.size = Pt(11)
-        for resp in job_data.get('Responsibilities', []): doc.add_paragraph(resp.lstrip('- '), style='List Bullet')
+        for resp in job_data.get('Responsibilities', []):
+            text = resp.lstrip('- ')
+    
+            p = doc.add_paragraph(style='List Bullet')
+
+            run = p.add_run(text)
+    
+            run.font.name = 'Lato'
         doc.add_paragraph()
         
     
