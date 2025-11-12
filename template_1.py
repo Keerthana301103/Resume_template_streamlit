@@ -6,25 +6,16 @@ from docx.shared import RGBColor, Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
-import google.generativeai as genai
 import os
-from dotenv import load_dotenv
+from portkey_ai import Portkey
+import streamlit as st
 
-# --- Environment Setup ---
 
-load_dotenv()
-api_key = os.getenv("GEMINI_API_KEY")
-if not api_key:
-    raise ValueError("GEMINI_API_KEY missing.")
-
-genai.configure(api_key=api_key)
-model = genai.GenerativeModel('gemini-2.5-flash') 
 
 # Define the brand color
 M_RED = RGBColor(204, 31, 32)
 
 
-# --- Text Extraction ---
 
 def extract_text_from_pdf(file):
     """Extracts text from an uploaded PDF file."""
@@ -41,10 +32,10 @@ def extract_text_from_docx(file):
     doc = docx.Document(file)
     return "\n".join([para.text for para in doc.paragraphs])
 
-# --- Gemini API Interaction ---
 
-def gemini_prompt(resume_text):
-    """Creates the prompt for the Gemini API based on the template."""
+
+def prompt(resume_text):
+    """Creates the prompt for the API based on the template."""
     
     # *** MODIFIED: Stronger prompt for summary, explicitly forbidding name ***
     template_instruction = """
@@ -90,17 +81,38 @@ Responsibilities:
 Repeat the ---JOB START--- to ---JOB END--- block for each job/project. If a section is empty, write "None".
 """
     return f"Resume Text:\n{resume_text}\n\n{template_instruction}"
-def call_gemini_api(prompt):
-    """Calls the Gemini API and returns the text response."""
-    response = model.generate_content(prompt)
+def call_portkey_api(prompt, portkey_api_key, portkey_base_url):
+    """
+    Calls the Portkey API with the provided prompt and credentials.
+"""
     try:
-        return response.text
-    except ValueError:
-        print("Warning: Gemini response blocked or empty.")
-        return "Error: Could not generate content."
+        # 1. Instantiate Portkey client with secrets passed from Streamlit
+        portkey = Portkey(
+            base_url = portkey_base_url,
+            api_key = portkey_api_key
+            )
+        
+        
+        response = portkey.chat.completions.create(
+            # Using the model you specified previously
+            model = "@aws-bedrock-use2/us.anthropic.claude-sonnet-4-5-20250929-v1:0", 
+            messages = [
+                {"role": "user", "content": prompt}
+            ],
 
-def parse_gemini_text(text):
-    """Parses the tagged text from Gemini into a structured dictionary."""
+            max_tokens = 4096 
+)
+        
+        # 3. Return the text content
+        return response.choices[0].message.content
+
+    except Exception as e:
+ # 4. Show a useful error message in the Streamlit UI
+        st.error(f"Portkey API Error: {str(e)}. Check your Portkey credentials and base_url in Streamlit Secrets.")
+        return None
+
+def parse_portkey_text(text):
+    """Parses the tagged text from AI into a structured dictionary."""
     resume_data = {"Jobs": []}
     lines = text.split('\n')
     current_key = None
@@ -190,7 +202,7 @@ def add_content_para(doc, text):
 
 def convert_to_docx(text):
     """
-    Parses the Gemini-formatted text and builds the DOCX document.
+    Parses the AI-formatted text and builds the DOCX document.
     """
     doc = Document()
     
@@ -198,9 +210,8 @@ def convert_to_docx(text):
     style.font.name = 'Calibri'
     style.font.size = Pt(11)
 
-    resume_data = parse_gemini_text(text)
+    resume_data = parse_portkey_text(text)
     
-    # --- Add Header (Logo Left, Name Right) ---
     header = doc.sections[0].header
     header.is_linked_to_previous = False
     header.paragraphs[0].text = "" 

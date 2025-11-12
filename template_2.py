@@ -34,7 +34,7 @@ def extract_text_from_docx(file):
 
 # --- Gemini API Interaction ---
 
-def gemini_prompt(resume_text):
+def prompt(resume_text):
     template_instruction = """
 You are a resume data extractor. Your task is to extract information from the provided resume and curate it as clean, tagged, plain text. 
 MUST BE professional throughout and make sure to use Harvard action words, as used in standard resumes, wherever necessary. DO NOT add any special formatting. The Python script will handle all styling
@@ -84,7 +84,7 @@ Repeat the ---JOB START--- to ---JOB END--- block for each job. If a section is 
 """
     return f"Resume Text:\n{resume_text}\n\n{template_instruction}"
 
-def call_gemini_api(prompt):
+def call_portkey_api(prompt):
     return model.generate_content(prompt).text
 
 

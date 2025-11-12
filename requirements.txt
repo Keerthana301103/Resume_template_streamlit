@@ -4,5 +4,4 @@ numpy
 pdfplumber
 python-docx
 sentence-transformers
-google-generativeai
-python-dotenv
+portkey-ai

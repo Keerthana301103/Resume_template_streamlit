@@ -1,23 +1,21 @@
 import streamlit as st
 from sentence_transformers import SentenceTransformer
 import base64
-import os # Import os to check for file existence
+import os 
 
-# --- Import template functions ---
-# Streamlit Cloud will look for these files in your repo.
 try:
     from template_2 import (
         extract_text_from_pdf as t2_extract_pdf,
         extract_text_from_docx as t2_extract_docx,
-        gemini_prompt as t2_gemini_prompt,
-        call_gemini_api as t2_call_gemini,
+        prompt as t2_prompt,
+        call_portkey_api as t2_call_portkey,
         convert_to_docx as t2_convert_to_docx,
     )
     from template_1 import (
         extract_text_from_pdf as t1_extract_pdf,
         extract_text_from_docx as t1_extract_docx,
-        gemini_prompt as t1_gemini_prompt,
-        call_gemini_api as t1_call_gemini,
+        prompt as t1_prompt,
+        call_portkey_api as t1_call_portkey,
         convert_to_docx as t1_convert_to_docx,
     )
 except ImportError:
@@ -50,19 +48,14 @@ def template_1():
 
             if st.button("Format Resume", key="format_btn_1"):
                 with st.spinner("Formatting... (Template 1)"):
-                    # Pass the API key from Streamlit secrets to your API call function
-                    # Assumes your function is updated to accept an api_key argument
-                    # api_key = st.secrets.get("GEMINI_API_KEY", "")
-                    # if not api_key:
-                    #     st.error("GEMINI_API_KEY not found in Streamlit secrets.")
-                    #     st.stop()
+                    api_key = st.secrets.get("PORTKEY_API_KEY")
+                    base_url = st.secrets.get("PORTKEY_BASE_URL")
+                    prompt = t1_prompt(resume_text)
                     
-                    prompt = t1_gemini_prompt(resume_text)
-                    # Update your call_gemini function to accept and use the API key
-                    # formatted_resume = t1_call_gemini(prompt, api_key=api_key)
-                    
-                    # --- Temporary: Remove this line when you update call_gemini ---
-                    formatted_resume = t1_call_gemini(prompt) 
+                    formatted_resume = t1_call_portkey(prompt,
+                                portkey_api_key=api_key,
+                              portkey_base_url=base_url
+                                                       ) 
                     
                     st.session_state.formatted_resume_1 = formatted_resume
 
@@ -105,21 +98,15 @@ def template_2():
 
             if st.button("Format Resume", key="format_btn_2"):
                 with st.spinner("Formatting... (Template 2)"):
-                    # Pass the API key from Streamlit secrets to your API call function
-                    # Assumes your function is updated to accept an api_key argument
-                    # api_key = st.secrets.get("GEMINI_API_KEY", "")
-                    # if not api_key:
-                    #     st.error("GEMINI_API_KEY not found in Streamlit secrets.")
-                    #     st.stop()
+                     api_key = st.secrets.get("PORTKEY_API_KEY")
+                     base_url = st.secrets.get("PORTKEY_BASE_URL")
+                     prompt = t2_prompt(resume_text)
+                     formatted_resume = t2_call_portkey(prompt,
+                                portkey_api_key=api_key,
+                              portkey_base_url=base_url
+                                                       ) 
 
-                    prompt = t2_gemini_prompt(resume_text)
-                    # Update your call_gemini function to accept and use the API key
-                    # formatted_resume = t2_call_gemini(prompt, api_key=api_key)
-                    
-                    # --- Temporary: Remove this line when you update call_gemini ---
-                    formatted_resume = t2_call_gemini(prompt)
-
-                    st.session_state.formatted_resume_2 = formatted_resume
+                     st.session_state.formatted_resume_2 = formatted_resume
 
             if st.session_state.formatted_resume_2:
                 st.subheader("Formatted Resume")
@@ -135,7 +122,7 @@ def template_2():
                 )
         except Exception as e:
             st.error(f"An error occurred in Template 2: {e}")
-            st.warning("Make sure your GEMINI_API_KEY is set in Streamlit secrets and your template_2.py file is correct.")
+            st.warning("Make sure your PORTKEY_API_KEY is set in Streamlit secrets and your template_2.py file is correct.")
 
 
 def set_bg_hack(main_bg):
