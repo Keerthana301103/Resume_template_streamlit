@@ -54,7 +54,7 @@ def template_1():
                     
                     formatted_resume = t1_call_portkey(prompt,
                                 portkey_api_key=api_key,
-                              portkey_base_url=base_url
+                                portkey_base_url=base_url
                                                        ) 
                     
                     st.session_state.formatted_resume_1 = formatted_resume

@@ -112,8 +112,7 @@ def convert_to_docx(text):
         print(f"Error: Could not find or open 'template_doc.docx'. Make sure it's in the same folder.")
         print(f"Details: {e}")
         print("Creating a blank document as a fallback.")
-        doc = Document() # Fallback
-
+        doc = Document() 
 
     style = doc.styles['Normal']; font = style.font
     font.name = 'Lato'; font.size = Pt(11)
