@@ -125,11 +125,10 @@ def template_2():
                 file_name_safe = "".join(c for c in candidate_name if c.isalnum() or c in (' ', '_')).rstrip()
                 dynamic_file_name = f"{file_name_safe}_PRFT_Resume_T2.docx"
                 
-                # 3. Use the dynamic filename in the button
                 st.download_button(
                     "Download DOCX",
                     file_data,
-                    dynamic_file_name, # Use the new dynamic name
+                    dynamic_file_name, 
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
 
