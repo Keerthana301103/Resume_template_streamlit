@@ -5,21 +5,11 @@ from docx import Document
 from docx.shared import RGBColor, Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
 from docx.enum.table import WD_ALIGN_VERTICAL
-
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
-import google.generativeai as genai
 import os
-from dotenv import load_dotenv
-
-
-
-
-load_dotenv()
-api_key = os.getenv("GEMINI_API_KEY")
-if not api_key: raise ValueError("GEMINI_API_KEY missing.")
-genai.configure(api_key=api_key)
-model = genai.GenerativeModel('gemini-2.5-flash') 
+from portkey_ai import Portkey
+import streamlit as st
 def extract_text_from_pdf(file):
     text = ""
     with pdfplumber.open(file) as pdf:
@@ -84,9 +74,35 @@ Repeat the ---JOB START--- to ---JOB END--- block for each job. If a section is 
 """
     return f"Resume Text:\n{resume_text}\n\n{template_instruction}"
 
-def call_portkey_api(prompt):
-    return model.generate_content(prompt).text
+def call_portkey_api(prompt, portkey_api_key, portkey_base_url):
+    """
+    Calls the Portkey API with the provided prompt and credentials.
+"""
+    try:
+        # 1. Instantiate Portkey client with secrets passed from Streamlit
+        portkey = Portkey(
+            base_url = portkey_base_url,
+            api_key = portkey_api_key
+            )
+        
+        
+        response = portkey.chat.completions.create(
+            # Using the model you specified previously
+            model = "@aws-bedrock-use2/us.anthropic.claude-sonnet-4-5-20250929-v1:0", 
+            messages = [
+                {"role": "user", "content": prompt}
+            ],
 
+            max_tokens = 4096 
+)
+        
+        # 3. Return the text content
+        return response.choices[0].message.content
+
+    except Exception as e:
+ # 4. Show a useful error message in the Streamlit UI
+        st.error(f"Portkey API Error: {str(e)}. Check your Portkey credentials and base_url in Streamlit Secrets.")
+        return None
 
 
 def set_table_no_border(table):
