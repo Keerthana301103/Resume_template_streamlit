@@ -313,6 +313,7 @@ def convert_to_docx(text):
             run.font.name = 'Lato'
         doc.add_paragraph()
         
+    candidate_name = resume_data.get("FullName", "Candidate_Resume")
     
     buffer = BytesIO(); doc.save(buffer); buffer.seek(0)
-    return buffer
+    return buffer,candidate_name

@@ -345,9 +345,10 @@ def convert_to_docx(text):
                     doc.add_paragraph(resp.lstrip('- '), style='List Bullet')
         
         doc.add_paragraph()
-
+    candidate_name = resume_data.get("FullName", "Candidate_Resume")
+    
     # --- Save to buffer ---
     buffer = BytesIO()
     doc.save(buffer)
     buffer.seek(0)
-    return buffer
+    return buffer, candidate_name

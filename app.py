@@ -64,11 +64,17 @@ def template_1():
                 st.markdown(st.session_state.formatted_resume_1)
 
                 file_data = t1_convert_to_docx(st.session_state.formatted_resume_1)
+                file_data, candidate_name = t1_convert_to_docx(st.session_state.formatted_resume_1)
+                
+                
+                file_name_safe = "".join(c for c in candidate_name if c.isalnum() or c in (' ', '_')).rstrip()
+                dynamic_file_name = f"{file_name_safe}_PRFT_Resume_T1.docx"
                 
                 st.download_button(
                     "Download DOCX",
                     file_data,
-                    "formatted_resume_T1.docx",
+                    dynamic_file_name,
+
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
         except Exception as e:
@@ -113,13 +119,20 @@ def template_2():
                 st.markdown(st.session_state.formatted_resume_2)
 
                 file_data = t2_convert_to_docx(st.session_state.formatted_resume_2)
+                file_data, candidate_name = t2_convert_to_docx(st.session_state.formatted_resume_2)
                 
+                # 2. Create a safe, dynamic filename
+                file_name_safe = "".join(c for c in candidate_name if c.isalnum() or c in (' ', '_')).rstrip()
+                dynamic_file_name = f"{file_name_safe}_PRFT_Resume_T2.docx"
+                
+                # 3. Use the dynamic filename in the button
                 st.download_button(
                     "Download DOCX",
                     file_data,
-                    "formatted_resume_T2.docx",
+                    dynamic_file_name, # Use the new dynamic name
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
+
         except Exception as e:
             st.error(f"An error occurred in Template 2: {e}")
             st.warning("Make sure your PORTKEY_API_KEY is set in Streamlit secrets and your template_2.py file is correct.")
