@@ -233,8 +233,7 @@ def convert_to_docx(text):
                 # --- Populate heading cell (col 0) ---
                 heading_cell = table.cell(r, 0)
                 heading_cell.text = heading
-                
-                # --- MODIFICATION: Fix spacing & alignment ---
+               
                 heading_cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
                 p_heading = heading_cell.paragraphs[0]
                 p_heading.runs[0].font.bold = True
@@ -243,9 +242,9 @@ def convert_to_docx(text):
                 p_heading.paragraph_format.space_after = Pt(0)  # Remove gap
     
                 content_cell = table.cell(r, 1)
-                content_cell.text = "" # Clear the default paragraph
+                content_cell.text = "" 
                 
-                # --- MODIFICATION: Fix spacing & alignment ---
+             
                 content_cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
                 # --- END MODIFICATION ---
 
