@@ -9,12 +9,21 @@ from docx.oxml import OxmlElement
 import os
 from portkey_ai import Portkey
 import streamlit as st
+import re
 
 
-
-# Define the brand color
 M_RED = RGBColor(204, 31, 32)
+def clean_pii(text):
+    """Removes email addresses and phone numbers using regex."""
 
+    email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+    
+    phone_pattern = r'(?:\+\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
+    
+    text = re.sub(email_pattern, '[EMAIL]', text)
+    text = re.sub(phone_pattern, '[PHONE]', text)
+    
+    return text
 
 
 def extract_text_from_pdf(file):
@@ -25,19 +34,18 @@ def extract_text_from_pdf(file):
             page_text = page.extract_text()
             if page_text:
                 text += page_text + "\n"
-    return text
+    return clean_pii(text)
 
 def extract_text_from_docx(file):
     """Extracts text from an uploaded DOCX file."""
     doc = docx.Document(file)
-    return "\n".join([para.text for para in doc.paragraphs])
+    raw_text = "\n".join([para.text for para in doc.paragraphs])
+    return clean_pii(raw_text)
 
 
 
 def prompt(resume_text):
     """Creates the prompt for the API based on the template."""
-    
-    # *** MODIFIED: Stronger prompt for summary, explicitly forbidding name ***
     template_instruction = """
 You are a resume data extractor. Your task is to extract information from the provided resume and format it as clean, tagged, plain text.
 DO NOT add any special formatting. Just extract the text for each tag.
@@ -86,7 +94,6 @@ def call_portkey_api(prompt, portkey_api_key, portkey_base_url):
     Calls the Portkey API with the provided prompt and credentials.
 """
     try:
-        # 1. Instantiate Portkey client with secrets passed from Streamlit
         portkey = Portkey(
             base_url = portkey_base_url,
             api_key = portkey_api_key
@@ -94,7 +101,7 @@ def call_portkey_api(prompt, portkey_api_key, portkey_base_url):
         
         
         response = portkey.chat.completions.create(
-            # Using the model you specified previously
+            
             model = "@aws-bedrock-use2/us.anthropic.claude-sonnet-4-5-20250929-v1:0", 
             messages = [
                 {"role": "user", "content": prompt}
@@ -107,7 +114,7 @@ def call_portkey_api(prompt, portkey_api_key, portkey_base_url):
         return response.choices[0].message.content
 
     except Exception as e:
- # 4. Show a useful error message in the Streamlit UI
+
         st.error(f"Portkey API Error: {str(e)}. Check your Portkey credentials and base_url in Streamlit Secrets.")
         return None
 

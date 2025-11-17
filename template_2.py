@@ -10,17 +10,31 @@ from docx.oxml import OxmlElement
 import os
 from portkey_ai import Portkey
 import streamlit as st
+import re
+def clean_pii(text):
+    """Removes email addresses and phone numbers using regex."""
+
+    email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+    
+    phone_pattern = r'(?:\+\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
+    
+    text = re.sub(email_pattern, '[EMAIL]', text)
+    text = re.sub(phone_pattern, '[PHONE]', text)
+    
+    return text
+
 def extract_text_from_pdf(file):
     text = ""
     with pdfplumber.open(file) as pdf:
         for page in pdf.pages:
             page_text = page.extract_text()
             if page_text: text += page_text + "\n"
-    return text
+    return clean_pii(text)
 
 def extract_text_from_docx(file):
     doc = docx.Document(file)
-    return "\n".join([para.text for para in doc.paragraphs])
+    raw_text = "\n".join([para.text for para in doc.paragraphs])
+    return clean_pii(raw_text)
 
 # --- Gemini API Interaction ---
 
