@@ -142,14 +142,14 @@ def convert_to_docx(text):
         print(f"Error: Could not find or open 'template_doc.docx'. Make sure it's in the same folder.")
         print(f"Details: {e}")
         print("Creating a blank document as a fallback.")
-        doc = Document() 
+        doc = Document()
 
     style = doc.styles['Normal']; font = style.font
     font.name = 'Lato'; font.size = Pt(11)
 
     resume_data = {}
     lines = text.split('\n'); current_key = None
-    
+
     for line in lines:
         stripped_line = line.strip()
 
@@ -178,17 +178,20 @@ def convert_to_docx(text):
                     current_key = "Responsibilities"
                     if current_key not in resume_data["Jobs"][-1]:
                         resume_data["Jobs"][-1][current_key] = []
+                else: # Simple key-value pairs like FullName
+                    resume_data[key] = value.strip()
+                    current_key = None
             else: # Simple key-value pairs like FullName
                 resume_data[key] = value.strip()
                 current_key = None
-        
+
         elif current_key:
             if current_key == "Responsibilities" and resume_data.get("Jobs"):
                 resume_data["Jobs"][-1][current_key].append(stripped_line)
             elif current_key in resume_data:
                 resume_data[current_key] += line + "\n"
-  
-    
+
+
     p_name = doc.add_paragraph()
     p_name.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     run_name = p_name.add_run(resume_data.get("FullName", "Candidates Name"))
@@ -204,16 +207,16 @@ def convert_to_docx(text):
     run_des.font.name = "Lato"
     run_des.bold = False
     run_des.font.size = Pt(12)
-    
+
     doc.add_paragraph()
 
     doc.add_paragraph("Professional Overview:", style='Heading 2').runs[0].font.color.rgb = RGBColor(204, 31, 32)
     doc.add_paragraph(resume_data.get("ProfessionalOverviewSummary", "").strip())
-    
-    
+
+
     table_lines_po = resume_data.get("ProfessionalOverviewTable", "").strip().split('\n')
     if table_lines_po and '|' in table_lines_po[0]:
-       
+
         table_data = []
         for row_str in table_lines_po:
             if '|' in row_str:
@@ -222,40 +225,40 @@ def convert_to_docx(text):
         if table_data:
             table = doc.add_table(rows=len(table_data), cols=2)
             table.style = 'Table Grid'
-            
-            set_table_no_border(table) 
+
+            set_table_no_border(table)
             table.columns[0].width = Inches(1.5)
             table.columns[1].width = Inches(5.0)
-            
+
             for r, row_data in enumerate(table_data):
                 heading, content = row_data
-                
+
                 # --- Populate heading cell (col 0) ---
                 heading_cell = table.cell(r, 0)
                 heading_cell.text = heading
-               
+
                 heading_cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
                 p_heading = heading_cell.paragraphs[0]
                 p_heading.runs[0].font.bold = True
                 p_heading.runs[0].font.name = 'Lato'
                 p_heading.paragraph_format.space_before = Pt(0) # Remove gap
                 p_heading.paragraph_format.space_after = Pt(0)  # Remove gap
-    
+
                 content_cell = table.cell(r, 1)
-                content_cell.text = "" 
-                
-             
+                content_cell.text = ""
+
+
                 content_cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
                 # --- END MODIFICATION ---
 
-                
+
                 items_list = [item.strip() for item in content.split(',') if item.strip()]
-                if not items_list: 
+                if not items_list:
                     items_list = [" "] # Add a space if content is empty
 
                 for i, item in enumerate(items_list):
                     p_bullet = content_cell.paragraphs[0] if i == 0 else content_cell.add_paragraph()
-                    
+
                     # --- MODIFICATION: Fix spacing ---
                     # This ensures all bullet paragraphs (including the first) have no spacing
                     p_bullet.paragraph_format.space_before = Pt(0)
@@ -263,31 +266,31 @@ def convert_to_docx(text):
                     # --- END MODIFICATION ---
 
                     run_bullet = p_bullet.add_run('•') # Red bullet
-                    run_bullet.font.color.rgb = RGBColor(204, 31, 32) 
+                    run_bullet.font.color.rgb = RGBColor(204, 31, 32)
                     run_bullet.font.name = 'Lato'
-                    
-                    p_bullet.add_run('\t') 
-                    
+
+                    p_bullet.add_run('\t')
+
                     run_text = p_bullet.add_run(item)
                     run_text.font.name = 'Lato'
                     run_text.font.size = Pt(9)
-                    
+
                     # Hanging indent format
                     p_bullet.paragraph_format.left_indent = Inches(0.25)
                     p_bullet.paragraph_format.first_line_indent = Inches(-0.25)
-                    
+
     doc.add_paragraph()
-    
+
 
     doc.add_paragraph().add_run("Key Engagements").italic = True
     table_lines_ke = resume_data.get("KeyEngagementsTable", "").strip().split('\n')
-    
+
     if table_lines_ke and '|' in table_lines_ke[0]:
         table_data = [[cell.strip() for cell in row.split('|')] for row in table_lines_ke]
-        
+
         if table_data:
             num_cols = max(len(row) for row in table_data) if table_data else 0
-            
+
             if num_cols > 0:
                 table = doc.add_table(rows=len(table_data), cols=num_cols)
                 table.style = 'Table Grid'
@@ -305,28 +308,74 @@ def convert_to_docx(text):
     doc.add_paragraph()
 
     doc.add_page_break()
-    
+
     p_exp_heading = doc.add_paragraph("Professional and Business Experience", style='Heading 2')
-    p_exp_heading.alignment = WD_ALIGN_PARAGRAPH.RIGHT 
+    p_exp_heading.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     p_exp_heading.runs[0].font.color.rgb = RGBColor(204, 31, 32)
 
+    # --- NEW LOGIC FOR PROJECT NUMBERING ---
+    last_company = None
+    project_counter = 0
+
     for job_data in resume_data.get("Jobs", []):
-        p = doc.add_paragraph(); company_run = p.add_run(job_data.get("CompanyName", "")); company_run.font.color.rgb = RGBColor(204, 31, 32); company_run.font.name = 'Lato Black'; company_run.bold = True; company_run.font.size = Pt(12)
-        p.add_run('\t'); duration_run = p.add_run(job_data.get("Duration", "")); duration_run.font.name = 'Lato'; p.paragraph_format.tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT)
-        p = doc.add_paragraph(); role_run = p.add_run(job_data.get("Role", "")); role_run.font.name = 'Lato'; role_run.bold = True; doc.add_paragraph()
-        p = doc.add_paragraph(); client_label_run = p.add_run("CLIENT: "); client_label_run.font.name = 'Lato'; client_label_run.bold = True; client_text_run = p.add_run(job_data.get("Client", "N/A")); client_text_run.font.name = 'Lato'; doc.add_paragraph()
-        p = doc.add_paragraph(); resp_run = p.add_run("Responsibilities:"); resp_run.bold=True; resp_run.font.name = 'Lato'; resp_run.underline = True;resp_run.font.size = Pt(11)
+        current_company = job_data.get("CompanyName", "")
+
+        if current_company == last_company:
+            project_counter += 1
+            display_company_name = f"Project {project_counter}"
+        else:
+            project_counter = 1
+            display_company_name = current_company
+            last_company = current_company
+
+        # Company Name/Project Number and Duration
+        p = doc.add_paragraph()
+        company_run = p.add_run(display_company_name)
+        company_run.font.color.rgb = RGBColor(204, 31, 32)
+        company_run.font.name = 'Lato Black'
+        company_run.bold = True
+        company_run.font.size = Pt(12)
+        p.add_run('\t')
+        duration_run = p.add_run(job_data.get("Duration", ""))
+        duration_run.font.name = 'Lato'
+        p.paragraph_format.tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT)
+
+        # Role
+        p = doc.add_paragraph()
+        role_run = p.add_run(job_data.get("Role", ""))
+        role_run.font.name = 'Lato'
+        role_run.bold = True
+        doc.add_paragraph()
+
+        # Client
+        p = doc.add_paragraph()
+        client_label_run = p.add_run("CLIENT: ")
+        client_label_run.font.name = 'Lato'
+        client_label_run.bold = True
+        client_text_run = p.add_run(job_data.get("Client", "N/A"))
+        client_text_run.font.name = 'Lato'
+        doc.add_paragraph()
+
+        # Responsibilities Heading
+        p = doc.add_paragraph()
+        resp_run = p.add_run("Responsibilities:")
+        resp_run.bold=True
+        resp_run.font.name = 'Lato'
+        resp_run.underline = True
+        resp_run.font.size = Pt(11)
+
+        # Responsibility Bullets
         for resp in job_data.get('Responsibilities', []):
             text = resp.lstrip('- ')
-    
             p = doc.add_paragraph(style='List Bullet')
-
             run = p.add_run(text)
-    
             run.font.name = 'Lato'
         doc.add_paragraph()
-        
+    # --- END NEW LOGIC ---
+
     candidate_name = resume_data.get("FullName", "Candidate_Resume")
-    
-    buffer = BytesIO(); doc.save(buffer); buffer.seek(0)
-    return buffer,candidate_name
+
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer, candidate_name
