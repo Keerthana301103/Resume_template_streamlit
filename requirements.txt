@@ -5,3 +5,4 @@ pdfplumber
 python-docx
 sentence-transformers
 portkey-ai
+streamlit_pdf_viewer 
