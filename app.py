@@ -30,12 +30,13 @@ st.set_page_config(page_title="TalentTune", layout="wide")
 
 def template_1():
     pdf_viewer(
-    "sample_template-2.pdf",
-    width=700,
-    height=1000,
+    "sample_template-1.pdf",
+    width=70,
+    height=100,
     zoom_level=1.2,                   
-    viewer_align="center",             # Center alignment
-    show_page_separator=True           # Show separators between pages
+    viewer_align="center",             
+    show_page_separator=True,
+    key="pdf_viewer_t1"# Show separators between pages
 )
     st.markdown("<h3 style='color: rgb(186, 43, 43);'> Format Resume to Company Template (Old)</h3>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Upload Resume (PDF or DOCX)", type=["pdf", "docx"], key="formatter-1")
@@ -99,7 +100,8 @@ def template_2():
     height=1000,
     zoom_level=1.2,                   
     viewer_align="center",             # Center alignment
-    show_page_separator=True           # Show separators between pages
+    show_page_separator=True,
+    key="pdf_viewer_t2"
 )
       
 

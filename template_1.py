@@ -102,7 +102,7 @@ def call_portkey_api(prompt, portkey_api_key, portkey_base_url):
         
         response = portkey.chat.completions.create(
             
-            model = "", 
+            model = "@dsvertex/gemini-2.5-flash", 
             messages = [
                 {"role": "user", "content": prompt}
             ],
