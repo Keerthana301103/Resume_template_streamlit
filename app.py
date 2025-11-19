@@ -96,8 +96,8 @@ def template_1():
 def template_2():
     pdf_viewer(
     "sample_template-2.pdf",
-    width=700,
-    height=1000,
+    width=7000,
+    height=5000,
     zoom_level=1.2,                   
     viewer_align="center",             # Center alignment
     show_page_separator=True,
