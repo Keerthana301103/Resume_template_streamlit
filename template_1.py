@@ -45,55 +45,48 @@ def extract_text_from_docx(file):
 
 
 def prompt(resume_text):
+    """Creates the prompt for the API based on the template."""
     template_instruction = """
 You are a resume data extractor. Your task is to extract information from the provided resume and curate it as clean, tagged, plain text. 
-MUST BE professional throughout and make sure to use Harvard action words, as used in standard resumes, wherever necessary. DO NOT add any special formatting. The Python script will handle all styling
+MUST BE professional throughout and make sure to use Harvard action words, as used in standard resumes, wherever necessary. DO NOT add any special formatting. The Python script will handle all styling.
 
 ---
 
 FullName: [Full Name]
-Designation: [Designation]
 
-ProfessionalOverviewSummary:
+Professional Summary:
 [A 2-3 sentence summary of the professional profile, extracted from the resume.Generate based on resume if not explicitly mentioned]
 
-ProfessionalOverviewTable:
-Roles | [Summarize Professional  roles  held.Do not repeat same roles.]
-Solutions | [Summarize  KEY solution areas, separated by commas. GROUP similar items.]
-Industries | [List relevant industries]
-Technologies | [Summarize and list KEY 5-7 technologies.GROUP related services.]
+Roles:
+[Summarize Professional  roles  held.Do not repeat same roles.]
 
-KeyEngagementsTable:
-Client | Role | Description
-[Company Name 1] | [Role at Company1] | [Brief description of engagement 1]
+Technologies:
+[Summarize and list KEY 5-7 technologies.GROUP related services. **You MUST preserve the 'Category: Skills' format for each line.** For example: "ETL Tools: Informatica, IICS"]
 
 Education:
-[Content for the education section]
+[Extract content for the education section.DO NOT Extract percentages/cgpas of the candidate]
 
-Publications:
-[Content for the publications section]
+Certifications:
+[Extract certifications done by the candidate from resume ]
 
-ProfessionalTrainingCertifications:
-[Content for certifications section]
-
-GeographicLocale:
-[Content for geographic locale section]
-
+Geographic locale:
+[Extract geographic locale from resume section]
 
 ---JOB START---
-CompanyName: [Company Name]
+CompanyName: [Company Name, if available. If not, use 'Project']
 Role: [Your Role/Job Title]
 Duration: [Start Date – End Date]
 Client: [Client Name for the project. If not applicable, write N/A]
+Description: [Extract the project description]
 Responsibilities:
-Make sure the bullet points are concise and follow "Harvard action words" as standard resumes follow.
 - [Responsibility point 1]
+- [Responsibility point 2]
+
 ---JOB END---
 
-Repeat the ---JOB START--- to ---JOB END--- block for each job. If a section is empty, write "None".
+Repeat the ---JOB START--- to ---JOB END--- block for each job/project. If a section is empty, write "None".
 """
     return f"Resume Text:\n{resume_text}\n\n{template_instruction}"
-
 def call_portkey_api(prompt, portkey_api_key, portkey_base_url):
     """
     Calls the Portkey API with the provided prompt and credentials.
@@ -322,8 +315,27 @@ def convert_to_docx(text):
     add_heading(doc, "Professional and Experience Summary", level=1)
 
     # --- Job/Project Blocks ---
+    # NEW LOGIC: Track company names and project counts
+    last_company = None
+    project_counter = 0
+    
     for i, job_data in enumerate(resume_data.get("Jobs", [])):
-        add_heading(doc, f"Project {i+1}", level=2)
+        current_company = job_data.get("CompanyName", "")
+        
+        # Determine the heading text
+        if current_company and current_company.lower() != 'project':
+            if current_company == last_company:
+                project_counter += 1
+                heading_text = f"Project {project_counter}"
+            else:
+                project_counter = 1
+                heading_text = current_company
+            last_company = current_company
+        else:
+            # Fallback for "Project" or missing CompanyName
+            heading_text = f"Project {i+1}"
+
+        add_heading(doc, heading_text, level=2)
 
         if job_data.get("Client"):
             p = doc.add_paragraph()
@@ -357,6 +369,7 @@ def convert_to_docx(text):
                     doc.add_paragraph(resp.lstrip('- '), style='List Bullet')
         
         doc.add_paragraph()
+        
     candidate_name = resume_data.get("FullName", "Candidate_Resume")
     
     # --- Save to buffer ---

@@ -135,7 +135,7 @@ def populate_table_cell(cell, heading, content):
     p_content.style.font.name = 'Lato'; p_content.style.font.size = Pt(9)
 
 def convert_to_docx(text):
-    # --- MODIFICATION: Load the template ---
+    
     try:
         doc = Document('template_doc.docx')
     except Exception as e:
@@ -259,8 +259,7 @@ def convert_to_docx(text):
                 for i, item in enumerate(items_list):
                     p_bullet = content_cell.paragraphs[0] if i == 0 else content_cell.add_paragraph()
 
-                    # --- MODIFICATION: Fix spacing ---
-                    # This ensures all bullet paragraphs (including the first) have no spacing
+                    
                     p_bullet.paragraph_format.space_before = Pt(0)
                     p_bullet.paragraph_format.space_after = Pt(0)
                     # --- END MODIFICATION ---
@@ -313,7 +312,6 @@ def convert_to_docx(text):
     p_exp_heading.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     p_exp_heading.runs[0].font.color.rgb = RGBColor(204, 31, 32)
 
-    # --- NEW LOGIC FOR PROJECT NUMBERING ---
     last_company = None
     project_counter = 0
 
