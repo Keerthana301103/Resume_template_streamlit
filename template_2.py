@@ -102,7 +102,7 @@ def call_portkey_api(prompt, portkey_api_key, portkey_base_url):
         
         response = portkey.chat.completions.create(
             # Using the model you specified previously
-            model = "@aws-bedrock-use2/us.anthropic.claude-sonnet-4-5-20250929-v1:0", 
+            model = "@dsvertex/gemini-2.5-flash", 
             messages = [
                 {"role": "user", "content": prompt}
             ],

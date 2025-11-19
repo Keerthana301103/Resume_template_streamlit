@@ -29,7 +29,7 @@ except ImportError:
 st.set_page_config(page_title="TalentTune", layout="wide")
 
 def template_1():
-    st.write("Sample Resume(Old Template)")
+    st.write("Old Template Format:")
     pdf_viewer(
     "sample_template-1.pdf",
     width=700,
@@ -95,7 +95,7 @@ def template_1():
 
 
 def template_2():
-    st.write("Sample Resume(New Template)")
+    st.write("New Template Format:")
     pdf_viewer(
     "sample_template-2.pdf",
     width=700,
