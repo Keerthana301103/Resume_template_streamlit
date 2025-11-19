@@ -45,50 +45,55 @@ def extract_text_from_docx(file):
 
 
 def prompt(resume_text):
-    """Creates the prompt for the API based on the template."""
     template_instruction = """
-You are a resume data extractor. Your task is to extract information from the provided resume and format it as clean, tagged, plain text.
-DO NOT add any special formatting. Just extract the text for each tag.
+You are a resume data extractor. Your task is to extract information from the provided resume and curate it as clean, tagged, plain text. 
+MUST BE professional throughout and make sure to use Harvard action words, as used in standard resumes, wherever necessary. DO NOT add any special formatting. The Python script will handle all styling
 
 ---
 
 FullName: [Full Name]
+Designation: [Designation]
 
-Professional Summary:
-[Extract and **summarize** the resume's professional overview. Create a brief, professional summary (3-4 sentences) capturing the main expertise and years of experience. **Do NOT include the candidate's name.** Base this summary *only* on the provided resume text.]
+ProfessionalOverviewSummary:
+[A 2-3 sentence summary of the professional profile, extracted from the resume.Generate based on resume if not explicitly mentioned]
 
-Roles:
-[Extract all roles listed."]
+ProfessionalOverviewTable:
+Roles | [Summarize Professional  roles  held.Do not repeat same roles.]
+Solutions | [Summarize  KEY solution areas, separated by commas. GROUP similar items.]
+Industries | [List relevant industries]
+Technologies | [Summarize and list KEY 5-7 technologies.GROUP related services.]
 
-Technologies:
-[Extract the technologies from the resume. **You MUST preserve the 'Category: Skills' format for each line.** For example: "ETL Tools: Informatica, IICS"]
+KeyEngagementsTable:
+Client | Role | Description
+[Company Name 1] | [Role at Company1] | [Brief description of engagement 1]
 
 Education:
-[Extract content for the education section]
+[Content for the education section]
 
-Certifications:
-[Extract certifications done by the candidate from resume ]
+Publications:
+[Content for the publications section]
 
-Geographic locale:
-[Extract geographic locale from resume section]
+ProfessionalTrainingCertifications:
+[Content for certifications section]
 
+GeographicLocale:
+[Content for geographic locale section]
 
 
 ---JOB START---
-CompanyName: [Company Name, if available. If not, use 'Project']
+CompanyName: [Company Name]
 Role: [Your Role/Job Title]
 Duration: [Start Date – End Date]
 Client: [Client Name for the project. If not applicable, write N/A]
-Description: [Extract the project description]
 Responsibilities:
+Make sure the bullet points are concise and follow "Harvard action words" as standard resumes follow.
 - [Responsibility point 1]
-- [Responsibility point 2]
-
 ---JOB END---
 
-Repeat the ---JOB START--- to ---JOB END--- block for each job/project. If a section is empty, write "None".
+Repeat the ---JOB START--- to ---JOB END--- block for each job. If a section is empty, write "None".
 """
     return f"Resume Text:\n{resume_text}\n\n{template_instruction}"
+
 def call_portkey_api(prompt, portkey_api_key, portkey_base_url):
     """
     Calls the Portkey API with the provided prompt and credentials.
