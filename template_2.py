@@ -106,11 +106,9 @@ def call_portkey_api(prompt, portkey_api_key, portkey_base_url):
             messages = [
                 {"role": "user", "content": prompt}
             ],
-
-            max_tokens = 4096 
+ 
 )
         
-        # 3. Return the text content
         return response.choices[0].message.content
 
     except Exception as e:

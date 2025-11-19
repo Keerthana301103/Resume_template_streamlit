@@ -107,7 +107,6 @@ def call_portkey_api(prompt, portkey_api_key, portkey_base_url):
                 {"role": "user", "content": prompt}
             ],
 
-            max_tokens = 4096 
 )
         
         # 3. Return the text content
