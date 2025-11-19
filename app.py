@@ -31,8 +31,8 @@ st.set_page_config(page_title="TalentTune", layout="wide")
 def template_1():
     pdf_viewer(
     "sample_template-1.pdf",
-    width=70,
-    height=100,
+    width=700,
+    height=500,
     zoom_level=1.2,                   
     viewer_align="center",             
     show_page_separator=True,
@@ -96,10 +96,10 @@ def template_1():
 def template_2():
     pdf_viewer(
     "sample_template-2.pdf",
-    width=7000,
-    height=5000,
+    width=700,
+    height=500,
     zoom_level=1.2,                   
-    viewer_align="center",             # Center alignment
+    viewer_align="center",            
     show_page_separator=True,
     key="pdf_viewer_t2"
 )
