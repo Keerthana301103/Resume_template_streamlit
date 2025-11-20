@@ -4,6 +4,7 @@ import base64
 from streamlit_pdf_viewer import pdf_viewer
 
 import os 
+import re # <-- Added import for regex cleaning
 
 try:
     from template_2 import (
@@ -28,6 +29,15 @@ except ImportError:
 
 st.set_page_config(page_title="TalentTune", layout="wide")
 
+# --- NEW HELPER FUNCTION TO CLEAN AI OUTPUT ---
+def clean_output_text(text):
+    """Removes job start/end markers and triple dashes from AI output."""
+    # Pattern to match '---JOB START---', '---JOB END---', and other '---' lines
+    text = re.sub(r'---JOB\s+(START|END)---|^\s*---\s*$', '', text, flags=re.MULTILINE)
+    return text.strip()
+# ---------------------------------------------
+
+
 def display_user_guide():
     """Displays guidelines for users before uploading resumes."""
     st.markdown("---")
@@ -50,13 +60,17 @@ def template_1():
     zoom_level=1.2,
     viewer_align="center",
     show_page_separator=True,
-    key="pdf_viewer_t1"# Show separators between pages
+    key="pdf_viewer_t1"
 )
     st.markdown("<h3 style='color: rgb(186, 43, 43);'> Format Resume to Company Template (Old)</h3>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Upload Resume (PDF or DOCX)", type=["pdf", "docx"], key="formatter-1")
 
+    # Session state to store the extracted text needed for regeneration
+    if "t1_resume_text" not in st.session_state: st.session_state.t1_resume_text = ""
+
     if uploaded_file:
         try:
+            # --- Text Extraction Logic ---
             if uploaded_file.type == "application/pdf":
                 resume_text = t1_extract_pdf(uploaded_file)
             elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
@@ -64,35 +78,48 @@ def template_1():
             else:
                 st.error("Unsupported file type.")
                 return
+            st.session_state.t1_resume_text = resume_text
 
             st.subheader("Extracted Resume Text")
             st.text_area("Resume Content (First 1000 Chars)", resume_text[:1000] + "..." if len(resume_text) > 1000 else resume_text, height=150, key="text_1")
 
             if "formatted_resume_1" not in st.session_state:
                 st.session_state.formatted_resume_1 = ""
+            
+            # --- Define the formatting logic as a reusable function ---
+            def run_t1_formatting():
+                api_key = st.secrets.get("PORTKEY_API_KEY")
+                base_url = st.secrets.get("PORTKEY_BASE_URL")
+                prompt = t1_prompt(st.session_state.t1_resume_text)
+                
+                return t1_call_portkey(prompt,
+                                     portkey_api_key=api_key,
+                                     portkey_base_url=base_url)
 
+            # --- Initial Format Button ---
             if st.button("Format Resume", key="format_btn_1"):
                 with st.spinner("Formatting... (Template 1)"):
-                    api_key = st.secrets.get("PORTKEY_API_KEY")
-                    base_url = st.secrets.get("PORTKEY_BASE_URL")
-                    prompt = t1_prompt(resume_text)
-                    
-                    formatted_resume = t1_call_portkey(prompt,
-                                                 portkey_api_key=api_key,
-                                                 portkey_base_url=base_url
-                                                                    ) 
-                    
+                    formatted_resume = run_t1_formatting()
                     st.session_state.formatted_resume_1 = formatted_resume
 
             if st.session_state.formatted_resume_1:
                 
+                # --- Regeneration Button ---
+                if st.button("🔄 Regenerate Formatted Text", key="regenerate_btn_1"):
+                    with st.spinner("Regenerating... (Template 1)"):
+                        formatted_resume = run_t1_formatting()
+                        st.session_state.formatted_resume_1 = formatted_resume
+                
                 # --- PREVIEW AND DOWNLOAD SECTION ---
+                cleaned_output = clean_output_text(st.session_state.formatted_resume_1)
+                
+                # The docx conversion must use the original uncleaned text
                 file_buffer, candidate_name = t1_convert_to_docx(st.session_state.formatted_resume_1)
                 file_size_kb = len(file_buffer.getvalue()) / 1024
                 
-                # 1. Structured Text Preview (Best available preview without external dependencies)
+                # 1. Structured Text Preview (Cleaned output)
                 st.subheader("📝 DOCX Content Preview (Structured Text)")
-                st.markdown(st.session_state.formatted_resume_1)
+                st.markdown(cleaned_output)
 
                 # 2. Download Button
                 file_name_safe = "".join(c for c in candidate_name if c.isalnum() or c in (' ', '_')).rstrip()
@@ -109,7 +136,7 @@ def template_1():
                 
         except Exception as e:
             st.error(f"An error occurred in Template 1: {e}")
-            st.warning("Make sure your API key is set in Streamlit secrets and your template_1.py file is correct.")
+            st.warning("Ensure your API key is set in Streamlit secrets and your template_1.py file is correct.")
 
 
 def template_2():
@@ -126,8 +153,12 @@ def template_2():
     st.markdown("<h3 style='color: rgb(186, 43, 43);'> Format Resume to Company Template (New Template)</h3>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Upload Resume (PDF or DOCX)", type=["pdf", "docx"], key="formatter-2")
 
+    # Session state to store the extracted text needed for regeneration
+    if "t2_resume_text" not in st.session_state: st.session_state.t2_resume_text = ""
+
     if uploaded_file:
         try:
+            # --- Text Extraction Logic ---
             if uploaded_file.type == "application/pdf":
                 resume_text = t2_extract_pdf(uploaded_file)
             elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
@@ -135,6 +166,7 @@ def template_2():
             else:
                 st.error("Unsupported file type.")
                 return
+            st.session_state.t2_resume_text = resume_text
 
             st.subheader("Extracted Resume Text")
             st.text_area("Resume Content (First 1000 Chars)", resume_text[:1000] + "..." if len(resume_text) > 1000 else resume_text, height=150, key="text_2")
@@ -142,27 +174,40 @@ def template_2():
             if "formatted_resume_2" not in st.session_state:
                 st.session_state.formatted_resume_2 = ""
 
+            # --- Define the formatting logic as a reusable function ---
+            def run_t2_formatting():
+                api_key = st.secrets.get("PORTKEY_API_KEY")
+                base_url = st.secrets.get("PORTKEY_BASE_URL")
+                prompt = t2_prompt(st.session_state.t2_resume_text)
+                
+                return t2_call_portkey(prompt,
+                                     portkey_api_key=api_key,
+                                     portkey_base_url=base_url)
+
+            # --- Initial Format Button ---
             if st.button("Format Resume", key="format_btn_2"):
                 with st.spinner("Formatting... (Template 2)"):
-                    api_key = st.secrets.get("PORTKEY_API_KEY")
-                    base_url = st.secrets.get("PORTKEY_BASE_URL")
-                    prompt = t2_prompt(resume_text)
-                    formatted_resume = t2_call_portkey(prompt,
-                                                 portkey_api_key=api_key,
-                                                 portkey_base_url=base_url
-                                                                    ) 
-
+                    formatted_resume = run_t2_formatting()
                     st.session_state.formatted_resume_2 = formatted_resume
 
             if st.session_state.formatted_resume_2:
                 
+                # --- Regeneration Button ---
+                if st.button("🔄 Regenerate Formatted Text", key="regenerate_btn_2"):
+                    with st.spinner("Regenerating... (Template 2)"):
+                        formatted_resume = run_t2_formatting()
+                        st.session_state.formatted_resume_2 = formatted_resume
+
                 # --- PREVIEW AND DOWNLOAD SECTION ---
+                cleaned_output = clean_output_text(st.session_state.formatted_resume_2)
+                
+                # The docx conversion must use the original uncleaned text
                 file_buffer, candidate_name = t2_convert_to_docx(st.session_state.formatted_resume_2)
                 file_size_kb = len(file_buffer.getvalue()) / 1024
 
-                # 1. Structured Text Preview (Best available preview without external dependencies)
+                # 1. Structured Text Preview (Cleaned output)
                 st.subheader("📝 DOCX Content Preview (Structured Text)")
-                st.markdown(st.session_state.formatted_resume_2)
+                st.markdown(cleaned_output)
 
                 # 2. Download Button
                 file_name_safe = "".join(c for c in candidate_name if c.isalnum() or c in (' ', '_')).rstrip()
@@ -226,7 +271,7 @@ def main():
     unsafe_allow_html=True
 )
     
-    display_user_guide() # <--- ADDED GUIDE HERE
+    display_user_guide()
 
     tab1, tab2 = st.tabs(["Old Template", "New Template"]) 
 
