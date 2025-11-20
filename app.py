@@ -28,14 +28,27 @@ except ImportError:
 
 st.set_page_config(page_title="TalentTune", layout="wide")
 
+def display_user_guide():
+    """Displays guidelines for users before uploading resumes."""
+    st.markdown("---")
+    st.markdown("## 📋 Resume Upload Guidelines & Privacy")
+    st.info("""
+    **Before uploading your resume, please ensure the following:**
+    
+    1.  **Remove Images:** **Crucially, delete any photos, headshots, or candidate images** from the document. The AI extractor may struggle with embedded images, and we prioritize text-only processing for consistency and privacy.
+    2.  **Clean Layout:** Use a clean, simple layout for best extraction results. Complex graphics, excessive tables, or multi-column layouts may lead to errors.
+    3.  **Check PII:** While our system attempts to clean PII (like emails and phone numbers) before processing, please review your document to ensure sensitive personal data is minimized.
+    """)
+    st.markdown("---")
+
 def template_1():
     st.write("Old Template Format:")
     pdf_viewer(
     "ui/sample_template-1.pdf",
     width=700,
     height=250,
-    zoom_level=1.2,                   
-    viewer_align="center",             
+    zoom_level=1.2,
+    viewer_align="center",
     show_page_separator=True,
     key="pdf_viewer_t1"# Show separators between pages
 )
@@ -65,33 +78,38 @@ def template_1():
                     prompt = t1_prompt(resume_text)
                     
                     formatted_resume = t1_call_portkey(prompt,
-                                portkey_api_key=api_key,
-                                portkey_base_url=base_url
-                                                       ) 
+                                                 portkey_api_key=api_key,
+                                                 portkey_base_url=base_url
+                                                                    ) 
                     
                     st.session_state.formatted_resume_1 = formatted_resume
 
             if st.session_state.formatted_resume_1:
-                st.subheader("Formatted Resume")
+                
+                # --- PREVIEW AND DOWNLOAD SECTION ---
+                file_buffer, candidate_name = t1_convert_to_docx(st.session_state.formatted_resume_1)
+                file_size_kb = len(file_buffer.getvalue()) / 1024
+                
+                # 1. Structured Text Preview (Best available preview without external dependencies)
+                st.subheader("📝 DOCX Content Preview (Structured Text)")
                 st.markdown(st.session_state.formatted_resume_1)
 
-                file_data = t1_convert_to_docx(st.session_state.formatted_resume_1)
-                file_data, candidate_name = t1_convert_to_docx(st.session_state.formatted_resume_1)
-                
-                
+                # 2. Download Button
                 file_name_safe = "".join(c for c in candidate_name if c.isalnum() or c in (' ', '_')).rstrip()
                 dynamic_file_name = f"{file_name_safe}_PRFT_Resume_T1.docx"
                 
-                st.download_button(
-                    "Download DOCX",
-                    file_data,
-                    dynamic_file_name,
+                st.success(f"✅ Document ready! File size: {file_size_kb:.2f} KB")
 
+                st.download_button(
+                    "Download Final DOCX",
+                    file_buffer,
+                    dynamic_file_name,
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
+                
         except Exception as e:
             st.error(f"An error occurred in Template 1: {e}")
-            st.warning("Make sure your GEMINI_API_KEY is set in Streamlit secrets and your template_1.py file is correct.")
+            st.warning("Make sure your API key is set in Streamlit secrets and your template_1.py file is correct.")
 
 
 def template_2():
@@ -100,13 +118,11 @@ def template_2():
     "ui/sample_template-2.pdf",
     width=700,
     height=250,
-    zoom_level=1.2,                   
-    viewer_align="center",            
+    zoom_level=1.2,
+    viewer_align="center",
     show_page_separator=True,
     key="pdf_viewer_t2"
 )
-      
-
     st.markdown("<h3 style='color: rgb(186, 43, 43);'> Format Resume to Company Template (New Template)</h3>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Upload Resume (PDF or DOCX)", type=["pdf", "docx"], key="formatter-2")
 
@@ -128,31 +144,36 @@ def template_2():
 
             if st.button("Format Resume", key="format_btn_2"):
                 with st.spinner("Formatting... (Template 2)"):
-                     api_key = st.secrets.get("PORTKEY_API_KEY")
-                     base_url = st.secrets.get("PORTKEY_BASE_URL")
-                     prompt = t2_prompt(resume_text)
-                     formatted_resume = t2_call_portkey(prompt,
-                                portkey_api_key=api_key,
-                              portkey_base_url=base_url
-                                                       ) 
+                    api_key = st.secrets.get("PORTKEY_API_KEY")
+                    base_url = st.secrets.get("PORTKEY_BASE_URL")
+                    prompt = t2_prompt(resume_text)
+                    formatted_resume = t2_call_portkey(prompt,
+                                                 portkey_api_key=api_key,
+                                                 portkey_base_url=base_url
+                                                                    ) 
 
-                     st.session_state.formatted_resume_2 = formatted_resume
+                    st.session_state.formatted_resume_2 = formatted_resume
 
             if st.session_state.formatted_resume_2:
-                st.subheader("Formatted Resume")
+                
+                # --- PREVIEW AND DOWNLOAD SECTION ---
+                file_buffer, candidate_name = t2_convert_to_docx(st.session_state.formatted_resume_2)
+                file_size_kb = len(file_buffer.getvalue()) / 1024
+
+                # 1. Structured Text Preview (Best available preview without external dependencies)
+                st.subheader("📝 DOCX Content Preview (Structured Text)")
                 st.markdown(st.session_state.formatted_resume_2)
 
-                file_data = t2_convert_to_docx(st.session_state.formatted_resume_2)
-                file_data, candidate_name = t2_convert_to_docx(st.session_state.formatted_resume_2)
-                
-                # 2. Create a safe, dynamic filename
+                # 2. Download Button
                 file_name_safe = "".join(c for c in candidate_name if c.isalnum() or c in (' ', '_')).rstrip()
                 dynamic_file_name = f"{file_name_safe}_PRFT_Resume_T2.docx"
                 
+                st.success(f"✅ Document ready! File size: {file_size_kb:.2f} KB")
+
                 st.download_button(
-                    "Download DOCX",
-                    file_data,
-                    dynamic_file_name, 
+                    "Download Final DOCX",
+                    file_buffer,
+                    dynamic_file_name,
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
 
@@ -174,11 +195,15 @@ def set_bg_hack(main_bg):
         return
 
     try:
+        # Use base64 encoding to embed the image
+        with open(main_bg, "rb") as f:
+            base664_image = base64.b64encode(f.read()).decode()
+            
         st.markdown(
              f"""
              <style>
              .stApp {{
-                 background: url(data:image/{main_bg_ext};base64,{base64.b64encode(open(main_bg, "rb").read()).decode()});
+                 background: url(data:image/{main_bg_ext};base64,{base664_image});
                  background-size: cover
              }}
              </style>
@@ -191,7 +216,7 @@ def set_bg_hack(main_bg):
 
 def main():
     
-    set_bg_hack('ui/bg_final.jpg')  
+    set_bg_hack('ui/bg_final.jpg') 
     st.markdown(
     "<h1 style='color:rgb(186, 43, 43); font-weight: bold; text-align: center;'>TalentTune</h1>",
     unsafe_allow_html=True
@@ -200,6 +225,8 @@ def main():
     "<p style='text-align: center; font-size:18px;'><em>Fine-tune your profile for job success.</em></p>",
     unsafe_allow_html=True
 )
+    
+    display_user_guide() # <--- ADDED GUIDE HERE
 
     tab1, tab2 = st.tabs(["Old Template", "New Template"]) 
 
