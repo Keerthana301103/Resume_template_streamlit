@@ -111,7 +111,7 @@ def call_portkey_api(prompt, portkey_api_key, portkey_base_url):
         return response.choices[0].message.content
 
     except Exception as e:
- # 4. Show a useful error message in the Streamlit UI
+
         st.error(f"Portkey API Error: {str(e)}. Check your Portkey credentials and base_url in Streamlit Secrets.")
         return None
 
