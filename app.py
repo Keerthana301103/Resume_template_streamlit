@@ -31,7 +31,7 @@ st.set_page_config(page_title="TalentTune", layout="wide")
 def template_1():
     st.write("Old Template Format:")
     pdf_viewer(
-    "ui\sample_template-1.pdf",
+    "ui/sample_template-1.pdf",
     width=700,
     height=250,
     zoom_level=1.2,                   
@@ -97,7 +97,7 @@ def template_1():
 def template_2():
     st.write("New Template Format:")
     pdf_viewer(
-    "ui\sample_template-2.pdf",
+    "ui/sample_template-2.pdf",
     width=700,
     height=250,
     zoom_level=1.2,                   
@@ -191,7 +191,7 @@ def set_bg_hack(main_bg):
 
 def main():
     
-    set_bg_hack('ui\bg_final.jpg')  
+    set_bg_hack('ui/bg_final.jpg')  
     st.markdown(
     "<h1 style='color:rgb(186, 43, 43); font-weight: bold; text-align: center;'>TalentTune</h1>",
     unsafe_allow_html=True
