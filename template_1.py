@@ -229,7 +229,7 @@ def convert_to_docx(text):
     p_left = cell_left.paragraphs[0]
     try:
         r_left = p_left.add_run()
-        r_left.add_picture('ui\logo.png', width=Inches(1.5))
+        r_left.add_picture('ui/logo.png', width=Inches(1.5))
     except Exception:
         p_left.text = "[logo.png not found]"
     p_left.alignment = WD_ALIGN_PARAGRAPH.LEFT
