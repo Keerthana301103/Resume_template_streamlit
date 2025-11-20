@@ -77,7 +77,7 @@ Geographic locale:
 ---JOB START---
 CompanyName: [Company Name, if available. If not, use 'Project']
 Role: [Your Role/Job Title]
-Duration: [Start Date – End Date]
+Duration: [Start Date - End Date]
 Client: [Client Name for the project. If not applicable, write N/A]
 Description: [Extract the project description]
 Responsibilities:
@@ -102,14 +102,13 @@ def call_portkey_api(prompt, portkey_api_key, portkey_base_url):
         
         response = portkey.chat.completions.create(
             
-            model = "@dsvertex/gemini-2.5-flash", 
+            model = "@aws-bedrock-use2/us.anthropic.claude-sonnet-4-20250514-v1:0", 
             messages = [
                 {"role": "user", "content": prompt}
             ],
 
 )
         
-        # 3. Return the text content
         return response.choices[0].message.content
 
     except Exception as e:
@@ -204,7 +203,7 @@ def add_content_para(doc, text):
             p = doc.add_paragraph(para_text)
             p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
-# --- Main DOCX Conversion Function ---
+
 
 def convert_to_docx(text):
     """
@@ -230,7 +229,7 @@ def convert_to_docx(text):
     p_left = cell_left.paragraphs[0]
     try:
         r_left = p_left.add_run()
-        r_left.add_picture('logo.png', width=Inches(1.5))
+        r_left.add_picture('ui\logo.png', width=Inches(1.5))
     except Exception:
         p_left.text = "[logo.png not found]"
     p_left.alignment = WD_ALIGN_PARAGRAPH.LEFT
@@ -353,7 +352,6 @@ def convert_to_docx(text):
         doc.add_paragraph()
     candidate_name = resume_data.get("FullName", "Candidate_Resume")
     
-    # --- Save to buffer ---
     buffer = BytesIO()
     doc.save(buffer)
     buffer.seek(0)

@@ -36,7 +36,7 @@ def extract_text_from_docx(file):
     raw_text = "\n".join([para.text for para in doc.paragraphs])
     return clean_pii(raw_text)
 
-# --- Gemini API Interaction ---
+
 
 def prompt(resume_text):
     template_instruction = """
@@ -93,7 +93,6 @@ def call_portkey_api(prompt, portkey_api_key, portkey_base_url):
     Calls the Portkey API with the provided prompt and credentials.
 """
     try:
-        # 1. Instantiate Portkey client with secrets passed from Streamlit
         portkey = Portkey(
             base_url = portkey_base_url,
             api_key = portkey_api_key
@@ -101,8 +100,8 @@ def call_portkey_api(prompt, portkey_api_key, portkey_base_url):
         
         
         response = portkey.chat.completions.create(
-            # Using the model you specified previously
-            model = "@dsvertex/gemini-2.5-flash", 
+           
+            model = "@aws-bedrock-use2/us.anthropic.claude-sonnet-4-20250514-v1:0", 
             messages = [
                 {"role": "user", "content": prompt}
             ],
