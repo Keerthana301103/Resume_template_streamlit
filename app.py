@@ -41,7 +41,7 @@ def display_user_guide():
     st.markdown("---")
     st.markdown("## Resume Upload Guidelines")
     st.info("""
-    ** PII Warning:** Please ensure you **remove all candidate images, photos, or headshots** from your resume before uploading. These are considered **Personal Identifiable Information (PII)** and can interfere with the data extraction process.
+     **PII Warning**: Please ensure you **remove all candidate images, photos, or headshots** from your resume before uploading.
     """)
     st.markdown("---")
 
@@ -49,7 +49,7 @@ def template_1():
     st.write("Old Template Format:")
     pdf_viewer(
     "ui/sample_template-1.pdf",
-    width=700,
+    width=750,
     height=250,
     zoom_level=1.2,
     viewer_align="center",
@@ -197,40 +197,12 @@ def template_2():
             st.warning("Make sure your PORTKEY_API_KEY is set in Streamlit secrets and your template_2.py file is correct.")
 
 
-def set_bg_hack(main_bg):
-    '''
-    A function to unpack an image from root folder and set as bg.
-    '''
-    # set bg name
-    main_bg_ext = "jpg"
-    
-    if not os.path.isfile(main_bg):
-        st.warning(f"Background image '{main_bg}' not found. Skipping background.")
-        return
 
-    try:
-        
-        with open(main_bg, "rb") as f:
-            base664_image = base64.b64encode(f.read()).decode()
-            
-        st.markdown(
-             f"""
-             <style>
-             .stApp {{
-                 background: url(data:image/{main_bg_ext};base64,{base64_image});
-                 background-size: cover
-             }}
-             </style>
-             """,
-             unsafe_allow_html=True
-         )
-    except Exception as e:
-        st.warning(f"Error setting background: {e}")
 
 
 def main():
     
-    set_bg_hack('ui/bg_final.jpg') 
+    
     st.markdown(
     "<h1 style='color:rgb(186, 43, 43); font-weight: bold; text-align: center;'>TalentTune</h1>",
     unsafe_allow_html=True
